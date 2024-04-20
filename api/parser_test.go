@@ -1,4 +1,4 @@
-package api
+package goodreads_parser
 
 import (
 	"strings"
