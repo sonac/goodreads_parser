@@ -53,6 +53,7 @@ func (p *Parser) FindBooks(searchString string) (*[]Book, error) {
 	if err != nil {
 		log.Fatal(err)
 	}
+	fmt.Println(html)
 
 	var books []Book
 	doc.Find("tr[itemtype='http://schema.org/Book']").Each(func(i int, s *goquery.Selection) {
@@ -92,7 +93,9 @@ func (p *Parser) parseBook(s *goquery.Selection) (*Book, error) {
 
 func (p *Parser) fetch(name string) (*string, error) {
 	formattedName := strings.ReplaceAll(name, " ", "+")
-	searchUrl := fmt.Sprintf("https://www.goodreads.com/search?utf8=%E2%9C%93&query=%s", formattedName)
+	baseUrl := "https://www.goodreads.com/search?utf8=%E2%9C%93&query="
+	searchUrl := baseUrl + formattedName
+	fmt.Println(searchUrl)
 	req, err := http.NewRequest("GET", searchUrl, nil)
 	if err != nil {
 		log.Println("error occurred during request build")
