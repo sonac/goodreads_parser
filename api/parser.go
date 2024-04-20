@@ -42,8 +42,8 @@ type Rating struct {
 	Avg   float64
 }
 
-func (p *Parser) Parse() (*[]Book, error) {
-	html, err := p.fetch()
+func (p *Parser) FindBooks(searchString string) (*[]Book, error) {
+	html, err := p.fetch(searchString)
 	if err != nil {
 		log.Println("error occurred during fetch")
 		return nil, err
@@ -90,8 +90,9 @@ func (p *Parser) parseBook(s *goquery.Selection) (*Book, error) {
 	return &book, nil
 }
 
-func (p *Parser) fetch() (*string, error) {
-	searchUrl := "https://www.goodreads.com/search?utf8=%E2%9C%93&query=harry+potter"
+func (p *Parser) fetch(name string) (*string, error) {
+	formattedName := strings.ReplaceAll(name, " ", "+")
+	searchUrl := fmt.Sprintf("https://www.goodreads.com/search?utf8=%E2%9C%93&query=%s", formattedName)
 	req, err := http.NewRequest("GET", searchUrl, nil)
 	if err != nil {
 		log.Println("error occurred during request build")
