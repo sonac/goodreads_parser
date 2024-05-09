@@ -129,43 +129,27 @@ Error rating book. Refresh and try again.
 
 	doc, err := goquery.NewDocumentFromReader(strings.NewReader(html))
 	if err != nil {
-		t.Fatalf("Failed to create document: %v", err)
+		t.Fatal(err)
 	}
 
-	s := doc.Find("tr[itemtype='http://schema.org/Book']").First()
-	p := NewParser()
-	book, err := p.parseBook(s)
-
+	book, err := parseSearchBook(doc.Find("tr").First())
 	if err != nil {
-		t.Fatalf("Failed to parse book: %v", err)
+		t.Fatal(err)
 	}
 
-	expectedTitle := "Harry Potter and the Sorcerer’s Stone (Harry Potter, #1)"
-	if book.Title != expectedTitle {
-		t.Errorf("Expected title '%s', got '%s'", expectedTitle, book.Title)
+	if book.Title != "Harry Potter and the Sorcerer’s Stone (Harry Potter, #1)" {
+		t.Errorf("expected title: %s, got: %s", "Harry Potter and the Sorcerer’s Stone (Harry Potter, #1)", book.Title)
 	}
 
-	expectedAuthor := "J.K. Rowling"
-	if book.Author != expectedAuthor {
-		t.Errorf("Expected author '%s', got '%s'", expectedAuthor, book.Author)
+	if book.Author != "J.K. Rowling" {
+		t.Errorf("expected author: %s, got: %s", "J.K. Rowling", book.Author)
 	}
 
-	expectedRating := Rating{9852011, 4.47}
-	if book.Rating != expectedRating {
-		t.Errorf("Expected rating '%v', got '%v'", expectedRating, book.Rating)
+	if book.Url != "/book/show/42844155-harry-potter-and-the-sorcerer-s-stone?from_search=true&from_srp=true&qid=MgxJ8chY0D&rank=1" {
+		t.Errorf("expected url: %s, got: %s", "https://www.goodreads.com/book/show/42844155-harry-potter-and-the-sorcerer-s-stone?from_search=true&from_srp=true&qid=MgxJ8chY0D&rank=1", book.Url)
 	}
 
-	expectedPosterUrl := "https://images-na.ssl-images-amazon.com/images/S/compressed.photo.goodreads.com/books/1598823299i/42844155.jpg"
-	if book.PosterUrl != expectedPosterUrl {
-		t.Errorf("Expected poster URL '%s', got '%s'", expectedPosterUrl, book.PosterUrl)
-	}
-}
-
-func TestGetPosterUrl(t *testing.T) {
-	url := "https://i.gr-assets.com/images/S/compressed.photo.goodreads.com/books/1598823299i/42844155._SX50_.jpg"
-	expected := "https://images-na.ssl-images-amazon.com/images/S/compressed.photo.goodreads.com/books/1598823299i/42844155.jpg"
-	result := getPosterUrl(url)
-	if result != expected {
-		t.Errorf("Expected poster URL '%s', got '%s'", expected, result)
+	if book.Id != 42844155 {
+		t.Errorf("expected id: %d, got: %d", 42844155, book.Id)
 	}
 }
