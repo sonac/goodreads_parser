@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"unicode"
 
 	"github.com/PuerkitoBio/goquery"
 )
@@ -142,11 +143,11 @@ func parseSearchBook(s *goquery.Selection) (*Book, error) {
 	url, _ := s.Find(".bookTitle").Attr("href")
 	author := s.Find(".authorName").First().Text()
 
-	idText := strings.Split(strings.Split(url, "/")[3], "-")
+	idText := strings.Split(url, "/")[3]
 	var id int
 	var err error
 	if len(idText) > 0 {
-		if id, err = strconv.Atoi(idText[0]); err != nil {
+		if id, err = strconv.Atoi(trimAfterNonDigit(idText)); err != nil {
 			return nil, err
 		}
 	}
@@ -178,4 +179,13 @@ func fetch(url string) (*string, error) {
 	}
 	htmlString := string(html)
 	return &htmlString, nil
+}
+
+func trimAfterNonDigit(s string) string {
+	for i, r := range s {
+		if !unicode.IsDigit(r) {
+			return s[:i]
+		}
+	}
+	return s
 }
