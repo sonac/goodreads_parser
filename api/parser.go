@@ -15,9 +15,7 @@ type HTTPClient interface {
 	Do(req *http.Request) (*http.Response, error)
 }
 
-var (
-	Client HTTPClient
-)
+var Client HTTPClient
 
 func init() {
 	Client = &http.Client{}
@@ -70,12 +68,12 @@ func (p *Parser) FindBooks(searchString string, lim int) (*[]Book, error) {
 		}
 		book, err := parseSearchBook(s)
 		if err != nil {
-			slog.Error("error occurred during search book parsing", err)
+			slog.Error("error occurred during search book parsing", "err", err)
 			return // skip this book
 		}
 		err = book.parseBookDetails()
 		if err != nil {
-			slog.Error("error occurred during book details parsing", err)
+			slog.Error("error occurred during book details parsing", "err", err)
 			return // skip this book
 		}
 		books = append(books, *book)
@@ -126,7 +124,10 @@ func (b *Book) parseBookDetails() error {
 	year, _ := strconv.Atoi(strings.Split(pubInfoText, " ")[2])
 	b.PublisherYear = int16(year)
 
-	b.Description = d.Find("div.DetailsLayoutRightParagraph__widthConstrained").Find("span.Formatted").Nodes[0].LastChild.Data
+	b.Description = strings.TrimSpace(d.Find("div.DetailsLayoutRightParagraph__widthConstrained span.Formatted").Text())
+	if b.Description == "" {
+		slog.Warn("description not found or empty for book :" + b.Title)
+	}
 
 	pageCountText := d.Find("p[data-testid='pagesFormat']").Text()
 	pageCountText = strings.Split(pageCountText, " ")[0]
