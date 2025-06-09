@@ -21,7 +21,7 @@ func TestParseBook(t *testing.T) {
 				<span class="by">by</span>
 <span itemprop="author" itemscope="" itemtype="http://schema.org/Person">
 <div class="authorName__container">
-<a class="authorName" itemprop="url" href="https://www.goodreads.com/author/show/1077326.J_K_Rowling?from_search=true&amp;from_srp=true"><span itemprop="name">J.K. Rowling</span></a>, 
+<a class="authorName" itemprop="url" href="https://www.goodreads.com/author/show/1077326.J_K_Rowling?from_search=true&amp;from_srp=true"><span itemprop="name">J.K. Rowling</span></a>,
 </div>
 <div class="authorName__container">
 <a class="authorName" itemprop="url" href="https://www.goodreads.com/author/show/6458971.Olly_Moss?from_search=true&amp;from_srp=true"><span itemprop="name">Olly Moss</span></a> <span class="authorName greyText smallText role">(Illustrator)</span>
@@ -41,7 +41,7 @@ func TestParseBook(t *testing.T) {
 				</div>
 
 
-				
+
 
 					<div style="float: left">
 						<div class="wtrButtonContainer wtrSignedOut" id="1_book_42844155">
