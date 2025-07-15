@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 	"unicode"
 
 	"github.com/PuerkitoBio/goquery"
@@ -51,10 +52,19 @@ type Rating struct {
 	Avg   float64
 }
 
+// BookOptions defines options for filtering book results
+type BookOptions struct {
+	MinRatings    int64
+	MinRatingAvg  float64
+	RequireAuthor bool
+	RemoveDups    bool
+}
+
 // FindBooks searches for books on Goodreads and returns a limited number of results
 // searchString: the query to search for
 // limit: maximum number of books to return
-func (p *Parser) FindBooks(searchString string, limit int) ([]Book, error) {
+// options: filtering options for quality control
+func (p *Parser) FindBooks(searchString string, limit int, options BookOptions) ([]Book, error) {
 	if searchString == "" {
 		return nil, fmt.Errorf("search string cannot be empty")
 	}
@@ -76,14 +86,30 @@ func (p *Parser) FindBooks(searchString string, limit int) ([]Book, error) {
 		return nil, fmt.Errorf("failed to parse HTML: %w", err)
 	}
 
-	books := make([]Book, 0, limit)
-	bookCount := 0
-
 	selector := doc.Find("tr[itemtype='http://schema.org/Book']")
 	slog.Info("Found book elements", "count", selector.Length())
 
+	bookCh := make(chan Book, 20) // buffer to prevent goroutine blocking
+	errCh := make(chan error, 20) // buffer for errors
+
+	// wg to track when all goroutines are complete
+	var wg sync.WaitGroup
+
+	// a semaphore to limit concurrent requests
+	semaphore := make(chan struct{}, 10)
+	seenIDs := make(map[int]bool)
+	activeRoutines := 0
+
+	// fetch more books than needed to account for filtering
+	// use twice the limit as a starting point for fetch buffer
+	fetchLimit := limit * 2
+	if options.MinRatings > 100 || options.MinRatingAvg > 4.0 {
+		// for stricter filters, fetch even more books
+		fetchLimit = limit * 4
+	}
+
 	selector.Each(func(i int, s *goquery.Selection) {
-		if bookCount >= limit {
+		if activeRoutines >= fetchLimit {
 			return
 		}
 
@@ -93,15 +119,65 @@ func (p *Parser) FindBooks(searchString string, limit int) ([]Book, error) {
 			return // skip this book
 		}
 
-		err = p.fetchBookDetails(book)
-		if err != nil {
-			slog.Error("Failed to fetch book details", "id", book.Id, "title", book.Title, "error", err)
-			return // skip this book
+		// early check for duplicate IDs if that option is enabled
+		if options.RemoveDups {
+			if seenIDs[book.Id] {
+				slog.Debug("Skipping duplicate book ID", "id", book.Id, "title", book.Title)
+				return
+			}
+			seenIDs[book.Id] = true
 		}
 
-		books = append(books, *book)
-		bookCount++
+		wg.Add(1)
+		activeRoutines++
+
+		go func(book *Book, index int) {
+			defer wg.Done()
+
+			semaphore <- struct{}{}
+			defer func() { <-semaphore }() // release the semaphore slot when done
+
+			err := p.fetchBookDetails(book)
+			if err != nil {
+				slog.Error("Failed to fetch book details", "id", book.Id, "title", book.Title, "error", err)
+				errCh <- err
+				return
+			}
+
+			if options.MinRatings > 0 && book.Rating.Count < options.MinRatings {
+				slog.Debug("Book filtered: insufficient ratings", "id", book.Id, "title", book.Title,
+					"count", book.Rating.Count, "required", options.MinRatings)
+				return
+			}
+
+			if options.MinRatingAvg > 0 && book.Rating.Avg < options.MinRatingAvg {
+				slog.Debug("Book filtered: low rating", "id", book.Id, "title", book.Title,
+					"avg", book.Rating.Avg, "required", options.MinRatingAvg)
+				return
+			}
+
+			if options.RequireAuthor && (book.Author == "" || book.Author == "Unknown" || book.Author == "Anonymous") {
+				slog.Debug("Book filtered: missing author", "id", book.Id, "title", book.Title)
+				return
+			}
+
+			bookCh <- *book
+		}(book, i)
 	})
+
+	go func() {
+		wg.Wait()
+		close(bookCh)
+		close(errCh)
+	}()
+
+	books := make([]Book, 0, limit)
+	for book := range bookCh {
+		books = append(books, book)
+		if len(books) >= limit {
+			break
+		}
+	}
 
 	return books, nil
 }
@@ -286,7 +362,12 @@ func (p *Parser) fetch(url string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to execute HTTP request: %w", err)
 	}
-	defer resp.Body.Close() // Ensure we close the response body to prevent resource leaks
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+
+		}
+	}(resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("HTTP request failed with status code: %d", resp.StatusCode)

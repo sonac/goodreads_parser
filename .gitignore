@@ -1,4 +1,5 @@
 bin
 main.go
 .vscode
+.idea
 __debug_bin*
