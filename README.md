@@ -6,76 +6,22 @@ This is a library with basic functionality to parse goodreads website for books.
 
 ### Basic usage
 
-```go
+See example of basic usage in `main.go`. You can run run this locally to check out via `go run main.go`
+
+To use as a library:
+
+```aiignore
 package main
 
 import goodreads_parser "github.com/sonac/goodreads_parser/api"
 import "fmt"
 
 func main() {
-  parser := goodreads_parser.NewParser()
-  options := goodreads_parser.DefaultBookOptions() // Use sensible defaults
-
-  books, err := parser.FindBooks("harry potter", 5, options)
-  if err != nil {
-    fmt.Println("Error:", err)
-    return
-  }
-
-  fmt.Printf("Found %d books\n", len(books))
-  for i, book := range books {
-    fmt.Printf("%d. %s by %s (%.1f stars, %d ratings)\n", 
-              i+1, book.Title, book.Author, book.Rating.Avg, book.Rating.Count)
-  }
-}
-```
-
-### With high quality filters
-
-```go
-package main
-
-import goodreads_parser "github.com/sonac/goodreads_parser/api"
-import "fmt"
-
-func main() {
-  parser := goodreads_parser.NewParser()
-
-  // Use built-in high quality options (1000+ ratings, 4.0+ avg rating)
-  options := goodreads_parser.NewHighQualityBookOptions()
-
-  books, err := parser.FindBooks("science fiction", 10, options)
-  if err != nil {
-    fmt.Println("Error:", err)
-    return
-  }
-
-  fmt.Printf("Found %d high-quality books\n", len(books))
-  for i, book := range books {
-    fmt.Printf("%d. %s by %s (%.1f stars, %d ratings)\n", 
-              i+1, book.Title, book.Author, book.Rating.Avg, book.Rating.Count)
-  }
-}
-```
-
-### With no filters
-
-```go
-package main
-
-import goodreads_parser "github.com/sonac/goodreads_parser/api"
-import "fmt"
-
-func main() {
-  parser := goodreads_parser.NewParser()
-  options := goodreads_parser.NewBookOptionsNoFilters() // No quality filtering
-
-  books, err := parser.FindBooks("harry potter", 5, options)
-  if err != nil {
-    fmt.Println("Error:", err)
-    return
-  }
-
-  fmt.Printf("%+v", books)
+ prs := goodreads_parser.NewParser()
+ bks, err := prs.FindBooks("harry potter", 1)
+ if err != nil {
+  fmt.Println(err)
+ }
+ fmt.Printf("%+v", bks)
 }
 ```
