@@ -275,7 +275,27 @@ func (p *Parser) fetchBookDetails(b *Book) error {
 
 	descElem := doc.Find("div.DetailsLayoutRightParagraph__widthConstrained span.Formatted")
 	if descElem.Length() > 0 {
-		b.Description = strings.TrimSpace(descElem.Text())
+		// Replace <br> tags with newlines before extracting text,
+		// otherwise goquery.Text() silently drops them and sentences run together.
+		descElem.Find("br").ReplaceWithHtml("\n")
+		raw := descElem.Text()
+		// Normalize non-breaking spaces and collapse runs of blank lines.
+		raw = strings.ReplaceAll(raw, "\u00a0", " ")
+		var lines []string
+		blanks := 0
+		for _, line := range strings.Split(raw, "\n") {
+			line = strings.TrimRight(line, " \t")
+			if line == "" {
+				blanks++
+				if blanks <= 1 {
+					lines = append(lines, "")
+				}
+			} else {
+				blanks = 0
+				lines = append(lines, line)
+			}
+		}
+		b.Description = strings.TrimSpace(strings.Join(lines, "\n"))
 	} else {
 		slog.Debug("Description not found", "book", b.Title)
 	}
